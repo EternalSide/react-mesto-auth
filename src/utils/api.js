@@ -74,6 +74,17 @@ class Api {
       headers: this.headers,
     }).then(this._checkRes);
   }
+
+  checkToken(token) {
+    if (token) {
+      return fetch("https://auth.nomoreparties.co/users/me", {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      }).then((data) => data.json());
+    }
+  }
 }
 const api = new Api({
   baseUrl: "https://mesto.nomoreparties.co/v1/cohort-66",
