@@ -1,12 +1,14 @@
 import "./InfoTooltip.css";
-import Success from "../../images/Success.svg";
-import Fail from "../../images/Fail.svg";
+import sucessPicture from "../../images/sucessPicture.svg";
+import failPicture from "../../images/failPicture.svg";
+import { usePopupClose } from "../../hooks/usePopupClose";
 const InfoTooltip = ({ isRegSuccess, isInfoPopupOpen, setIsInfoPopupOpen }) => {
+  usePopupClose(isInfoPopupOpen, () => setIsInfoPopupOpen(false));
   return (
     <div className={isInfoPopupOpen ? "popup popup_opened" : "popup"}>
       <div className="popup-info">
         <button className="popup__close" type="button" onClick={() => setIsInfoPopupOpen(false)}></button>
-        <img src={isRegSuccess ? Success : Fail} />
+        <img src={isRegSuccess ? sucessPicture : failPicture} alt="Картинка со статусом запроса" />
         <h2>{isRegSuccess ? "Вы успешно зарегистрировались!" : "Что-то пошло не так! Попробуйте ещё раз."}</h2>
       </div>
     </div>

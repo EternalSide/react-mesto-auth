@@ -8,52 +8,40 @@ import api from "../utils/api.js";
 import CurrentUserContext from "../contexts/CurrentUserContext";
 import EditAvatarPopup from "./EditAvatarPopup.jsx";
 import AddPlacePopup from "./AddPlacePopup .jsx";
-import useEscapeClose from "../hooks/useEscapeClose.js";
 import { Navigate, useNavigate } from "react-router-dom";
 import Registration from "./Auth/Registration";
 import Login from "./Auth/Login";
 import { Routes, Route } from "react-router-dom";
-
+import auth from "../utils/auth";
 function App() {
   const [cards, setCards] = useState([]);
-  const [currentUser, setCurrentUser] = useState({});
+  const [currentUser, setCurrentUser] = useState({
+    tokenInfo: "",
+  });
   const [isLoading, setIsLoading] = useState(false);
-
+  const [loggedIn, setLoggedIn] = useState(false);
   const token = localStorage.getItem("token");
+
   const navigate = useNavigate();
 
   // Начальное инфо и проверить токен
   useEffect(() => {
     if (token) {
-      Promise.all([api.getInitialCards(), api.getUserInfo(), api.checkToken(token)])
-        .then(([cards, userInfo, { data: tokenUserInfo }]) => {
-          if (!tokenUserInfo) {
-            navigate("/sign-in");
-          } else {
-            const email = tokenUserInfo.email;
-            setCards(cards);
-            setCurrentUser({
-              ...userInfo,
-              email,
-            });
-          }
+      Promise.all([api.getInitialCards(), api.getUserInfo(), auth.checkToken(token)])
+        .then(([cards, userInfo, { data: tokenInfo }]) => {
+          setLoggedIn(true);
+          setCards(cards);
+          setCurrentUser({
+            ...userInfo,
+            tokenInfo: tokenInfo,
+          });
         })
-        .catch((e) => console.log(e));
+        .catch((e) => {
+          console.log(e);
+          navigate("/sign-in");
+        });
     }
   }, [token, navigate]);
-
-  // Добавление карточки
-  const handleAddPlaceSubmit = (data) => {
-    setIsLoading(true);
-    api
-      .addCard(data)
-      .then((newCard) => {
-        setCards([newCard, ...cards]);
-        setIsAddPlacePopupOpen(false);
-      })
-      .catch((e) => console.log(e))
-      .finally(() => setIsLoading(false));
-  };
 
   //  Лайк
   const handleCardLike = (card) => {
@@ -100,30 +88,48 @@ function App() {
     setSelectedCard(null);
   };
 
-  // Закрыть на ESC
-  useEscapeClose(closeAllPopups);
-
-  // Обновить инфо
-  const handleUpdateUser = (data) => {
+  function handleSubmit(request) {
     setIsLoading(true);
-    api
-      .changeUserInfo(data)
-      .then((data) => {
-        setCurrentUser(data);
-        setIsEditProfilePopupOpen(false);
-      })
-      .catch((e) => console.log(e))
+    request()
+      .then(closeAllPopups)
+      .catch(console.error)
       .finally(() => setIsLoading(false));
-  };
+  }
   // Обновить аватар
   const handleUpdateAvatar = (data) => {
-    api
-      .changeAvatar(data.avatar)
-      .then((data) => {
-        setCurrentUser(data);
-        setIsEditAvatarPopupOpen(false);
-      })
-      .catch((e) => console.log(e));
+    function makeRequest() {
+      return api.changeAvatar(data.avatar).then(
+        setCurrentUser((prev) => ({
+          ...prev,
+          avatar: data.avatar,
+        }))
+      );
+    }
+    handleSubmit(makeRequest);
+  };
+  // Обновить информацию о пользователе
+  const handleUpdateUser = (data) => {
+    function makeRequest() {
+      return api.changeUserInfo(data).then(
+        setCurrentUser((prev) => ({
+          ...prev,
+          name: data.name,
+          about: data.about,
+        }))
+      );
+    }
+    handleSubmit(makeRequest);
+  };
+
+  // Добавление карточки
+  const handleAddPlaceSubmit = (data) => {
+    function makeRequest() {
+      return api.addCard(data).then((newCard) => {
+        setCards([newCard, ...cards]);
+        setIsAddPlacePopupOpen(false);
+      });
+    }
+    handleSubmit(makeRequest);
   };
 
   return (
@@ -137,7 +143,7 @@ function App() {
             element={
               token ? (
                 <>
-                  <Header userEmail={currentUser.email} />
+                  <Header userEmail={currentUser?.tokenInfo?.email} loggedIn={loggedIn} />
                   <Main
                     cards={cards}
                     onEditProfile={() => setIsEditProfilePopupOpen(true)}
@@ -147,7 +153,6 @@ function App() {
                     onCardLike={handleCardLike}
                     onCardDelete={handleCardDelete}
                   />
-
                   <Footer />
                 </>
               ) : (
@@ -156,9 +161,8 @@ function App() {
             }
           />
         </Routes>
-
         {/* Попапы */}
-        {selectedCard !== null && <ImagePopup card={selectedCard} close={closeAllPopups} />}
+        {selectedCard !== null && <ImagePopup card={selectedCard} onClose={closeAllPopups} />}
         <EditProfilePopup
           isLoading={isLoading}
           isOpen={isEditProfilePopupOpen}
@@ -171,7 +175,12 @@ function App() {
           isAddPlacePopupOpen={isAddPlacePopupOpen}
           onAddPlace={handleAddPlaceSubmit}
         />
-        <EditAvatarPopup isOpen={isEditAvatarPopupOpen} onClose={closeAllPopups} onUpdateAvatar={handleUpdateAvatar} />
+        <EditAvatarPopup
+          isLoading={isLoading}
+          isOpen={isEditAvatarPopupOpen}
+          onClose={closeAllPopups}
+          onUpdateAvatar={handleUpdateAvatar}
+        />
       </div>
     </CurrentUserContext.Provider>
   );

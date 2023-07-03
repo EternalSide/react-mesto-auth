@@ -58,7 +58,7 @@ class Api {
     return fetch(`${this._baseUrl}/cards/${id}`, {
       method: "DELETE",
       headers: this.headers,
-    });
+    }).then(this._checkRes);
   }
 
   addLike(id) {
@@ -73,17 +73,6 @@ class Api {
       method: "DELETE",
       headers: this.headers,
     }).then(this._checkRes);
-  }
-
-  checkToken(token) {
-    if (token) {
-      return fetch("https://auth.nomoreparties.co/users/me", {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      }).then((data) => data.json());
-    }
   }
 }
 const api = new Api({

@@ -1,9 +1,10 @@
 import "./Auth.css";
-import logo from "../../images/logo.svg";
+
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import InfoTooltip from "../InfoToolTip/InfoTooltip";
-import { Link } from "react-router-dom";
+import auth from "../../utils/auth";
+import Header from "../Header/Header";
 const Registration = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState({
@@ -14,50 +15,27 @@ const Registration = () => {
   const [isInfoPopupOpen, setIsInfoPopupOpen] = useState(false);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const res = await fetch("https://auth.nomoreparties.co/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          "password": `${userInfo.password}`,
-          "email": `${userInfo.email}`,
-        }),
-      });
-      const { data } = await res.json();
-      if (!data) {
-        setIsRegSuccess(false);
-        setIsInfoPopupOpen(true);
-      }
-      if (data) {
+    auth
+      .registerUser(userInfo)
+      .then(() => {
         setIsRegSuccess(true);
-        setIsInfoPopupOpen(true);
         setTimeout(() => {
           navigate("/sign-in");
         }, 2000);
-      }
-    } catch (error) {
-      console.log(error);
-      setIsRegSuccess(false);
-      setIsInfoPopupOpen(true);
-    }
+      })
+      .catch((e) => {
+        setIsRegSuccess(false);
+      })
+      .finally(() => setIsInfoPopupOpen(true));
   };
   return (
     <>
-      {isRegSuccess && isInfoPopupOpen && (
+      {(isRegSuccess || !isRegSuccess) && isInfoPopupOpen && (
         <InfoTooltip isRegSuccess={isRegSuccess} isInfoPopupOpen={isInfoPopupOpen} setIsInfoPopupOpen={setIsInfoPopupOpen} />
       )}
-      {!isRegSuccess && isInfoPopupOpen && (
-        <InfoTooltip isRegSuccess={isRegSuccess} isInfoPopupOpen={isInfoPopupOpen} setIsInfoPopupOpen={setIsInfoPopupOpen} />
-      )}
+
       <div className="auth">
-        <div className="auth__header">
-          <img src={logo} alt="Лого сайта" />
-          <Link to="/sign-in" className="auth__link">
-            Войти
-          </Link>
-        </div>
+        <Header link="/sign-in" linkLabel="Логин" />
         <form className="auth__form" onSubmit={handleSubmit}>
           <h1 className="auth__title">Регистрация</h1>
           <input
